@@ -7,12 +7,17 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null &&
         request.auth.token.email.lower() == 'chrysfavers@gmail.com';
+    }
 
-    // Réglages publics (catalogue, lien Wave...) : tout le monde peut lire,
-    // seul l'admin autorisé peut modifier.
+    // Réglages publics (catalogue, lien Wave...) : tout le monde peut lire.
+    // Le document "main" peut être CRÉÉ une seule fois par n'importe qui (code
+    // d'initialisation au premier chargement, sans compte connecté) quand il
+    // n'existe pas encore ; ensuite seul l'admin autorisé peut le modifier.
     match /settings/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create: if (resource == null) && (docId == 'main');
+      allow update: if isAdmin();
+      allow delete: if false;
     }
 
     // Un client peut CRÉER une demande (formulaire public) et déclarer son

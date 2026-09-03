@@ -124,17 +124,23 @@ export default function MyCabinePage() {
 
   useEffect(() => {
     (async () => {
-      const snap = await getDoc(doc(db, 'settings', 'main'));
-      if (snap.exists()) {
-        const s = snap.data();
-        setSettings({
-          ...DEFAULT_SETTINGS,
-          ...s,
-          receivingNumbers: { ...DEFAULT_SETTINGS.receivingNumbers, ...(s.receivingNumbers || {}) },
-          catalog: s.catalog || DEFAULT_CATALOG,
-        });
-      } else {
-        await setDoc(doc(db, 'settings', 'main'), DEFAULT_SETTINGS);
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'main'));
+        if (snap.exists()) {
+          const s = snap.data();
+          setSettings({
+            ...DEFAULT_SETTINGS,
+            ...s,
+            receivingNumbers: { ...DEFAULT_SETTINGS.receivingNumbers, ...(s.receivingNumbers || {}) },
+            catalog: s.catalog || DEFAULT_CATALOG,
+          });
+        } else {
+          // Crée les réglages par défaut si absents (première visite).
+          await setDoc(doc(db, 'settings', 'main'), DEFAULT_SETTINGS);
+        }
+      } catch (e) {
+        // En cas d'erreur (réseau, règle...), on garde les valeurs par défaut
+        // et on continue : la page doit toujours s'afficher, jamais rester bloquée.
       }
       setReady(true);
     })();
