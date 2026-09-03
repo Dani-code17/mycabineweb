@@ -890,8 +890,22 @@ function SettingsPanel({ settings, saveSettings }) {
   const [newDuree, setNewDuree] = useState('');
   const [newPrice, setNewPrice] = useState('');
 
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [saveOk, setSaveOk] = useState(false);
+
   async function save() {
-    await saveSettings({ ...settings, waveBaseLink: waveBaseLink.trim(), receivingNumbers: numbers, catalog });
+    setSaving(true); setSaveError(''); setSaveOk(false);
+    try {
+      await saveSettings({ ...settings, waveBaseLink: waveBaseLink.trim(), receivingNumbers: numbers, catalog });
+      setSaveOk(true);
+      setTimeout(() => setSaveOk(false), 2500);
+    } catch (e) {
+      console.error('Erreur enregistrement paramètres :', e);
+      setSaveError(`Échec de l'enregistrement : ${(e && e.message) || 'erreur inconnue'}`);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function addPass() {
@@ -946,7 +960,13 @@ function SettingsPanel({ settings, saveSettings }) {
         </div>
         <button onClick={addPass} style={{ borderColor: '#E8E4FA' }} className="mt-2 border rounded-lg px-3 py-2 text-xs font-semibold flex items-center gap-1"><Plus size={13} /> Ajouter ce pass</button>
       </div>
-      <button onClick={save} style={{ background: '#6C4CF5', color: '#FFFFFF' }} className="w-full py-3 rounded-full text-sm font-semibold">Enregistrer les paramètres</button>
+      <button onClick={save} disabled={saving} style={{ background: '#6C4CF5', color: '#FFFFFF' }} className="w-full py-3 rounded-full text-sm font-semibold">{saving ? 'Enregistrement…' : 'Enregistrer les paramètres'}</button>
+      {saveError && (
+        <p style={{ color: '#C0392B', background: '#FDECEA' }} className="text-xs px-3 py-2 rounded-lg mt-3 break-words text-center">{saveError}</p>
+      )}
+      {saveOk && (
+        <p style={{ color: '#1B6B5C', background: '#E2F7EF' }} className="text-xs px-3 py-2 rounded-lg mt-3 text-center">✅ Paramètres enregistrés.</p>
+      )}
     </div>
   );
 }
