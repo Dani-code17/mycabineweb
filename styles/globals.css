@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+.font-display { font-family: 'Sora', sans-serif; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+
+@keyframes anim-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.anim-in { animation: anim-in 0.25s ease-out; }
+
+.logo3d {
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  color: #3FE8DB;
+  display: inline-block;
+  transform: perspective(500px) rotateX(14deg) rotateY(-6deg);
+  letter-spacing: -0.02em;
+  text-shadow:
+    1px 1px 0 #1E9E93,
+    2px 2px 0 #18867C,
+    3px 3px 0 #136E65,
+    4px 4px 0 #0E564F,
+    5px 5px 0 #093D38,
+    6px 8px 14px rgba(0, 0, 0, 0.45);
+}
+
+.signal-bar { display: inline-block; width: 4px; background: #3FE8DB; border-radius: 1px; margin-right: 2px; animation: bar-pulse 1.4s ease-in-out infinite; }
+@keyframes bar-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+
+.ref-ticket { font-family: 'JetBrains Mono', monospace; font-weight: 700; letter-spacing: 0.03em; }
+
+.wa-float { display: block; animation: wa-bob 2.6s ease-in-out infinite; }
+@keyframes wa-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.wa-ring { position: absolute; inset: 0; border-radius: 9999px; background: #25D366; opacity: 0.55; animation: wa-pulse 2s ease-out infinite; }
+@keyframes wa-pulse { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(1.7); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; }
+  .wa-float { animation: none; }
+  .wa-ring { display: none; }
+}
