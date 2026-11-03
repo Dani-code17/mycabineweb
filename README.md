@@ -1,136 +1,151 @@
-# MyCabine — Guide de mise en ligne (pas à pas)
+# MyCabine — Boutique de pass mobiles avec back-office et notifications instantanées
 
-Ce projet est une vraie application web (Next.js) prête à être déployée sur internet.
-Compte environ 45-60 minutes la première fois, en suivant chaque étape dans l'ordre.
+> Application **Next.js** permettant à un revendeur de pass télécoms (Orange, MTN, Moov, Wave)
+> de recevoir des demandes en ligne, de les encaisser via un lien de paiement, et d'être
+> **notifié en temps réel sur Telegram**.
+> *Projet client — conçu, développé et déployé.*
 
----
-
-## Ce dont tu as besoin avant de commencer
-
-- Un ordinateur avec **Node.js** installé (version 18 ou plus). Si tu ne l'as pas :
-  télécharge-le sur https://nodejs.org (choisis la version "LTS").
-- Un compte **Google** (pour Firebase).
-- Un compte **GitHub** (gratuit) — https://github.com/signup
-- Un compte **Vercel** (gratuit, tu peux te connecter directement avec GitHub) — https://vercel.com
-- Ton **lien de paiement Wave marchand** (récupérable dans ton application Wave, section "Recevoir de l'argent" ou "Mon lien").
-- Ton compte **Telegram** installé sur ton téléphone.
+**🇫🇷 Français** · [🇬🇧 English](#-english)
 
 ---
 
-## Étape 1 — Créer le projet Firebase (base de données + connexion admin)
+## Le problème
 
-1. Va sur https://console.firebase.google.com et clique **"Ajouter un projet"**.
-2. Nomme-le par exemple `mycabine` et suis les étapes (tu peux désactiver Google Analytics, pas nécessaire).
-3. Une fois le projet créé, dans le menu de gauche : **Build > Firestore Database** → **Créer une base de données** → choisis **"Mode production"** → sélectionne une région proche (ex: `eur3` ou `europe-west`) → Activer.
-4. Toujours dans Firestore, va dans l'onglet **"Règles"** et remplace tout le contenu par celui du fichier `firestore.rules` fourni dans ce projet. Clique **Publier**.
-5. Dans le menu de gauche : **Build > Authentication** → **Get started** → active la méthode **"E-mail/Mot de passe"**.
-6. Toujours dans Authentication, onglet **"Users"** → **Add user** → entre ton email et un mot de passe solide. C'est ton compte admin — garde-le précieusement.
-7. Retourne à la page d'accueil du projet (icône engrenage > **Paramètres du projet**) → en bas, section **"Vos applications"** → clique l'icône `</>` (Web) → donne un nom (ex: `mycabine-web`) → **Enregistrer l'application**.
-8. Firebase t'affiche un bloc `firebaseConfig` avec des valeurs (`apiKey`, `authDomain`, etc.). **Garde cette page ouverte**, tu en as besoin à l'étape 4.
+Revendre des pass internet, d'appel et de SMS depuis WhatsApp, c'est : des commandes noyées
+dans les conversations, des transferts d'argent à vérifier à la main, et un catalogue de prix
+qu'il faut répéter à chaque client. **MyCabine** transforme cette activité en boutique
+autonome, sans embaucher de serveur.
 
----
+## Fonctionnalités
 
-## Étape 2 — Créer le bot Telegram (notifications gratuites)
+### Côté client (public)
+- **Catalogue de pass** par opérateur (Orange, MTN, Moov, Wave) et par type
+  (**Internet**, **Appel**, **SMS**), avec durée et prix.
+- **Formulaire de demande** : choix du pass, numéro à créditer, coordonnées.
+- **Paiement par lien Wave marchand**, puis déclaration du paiement par le client
+  (statut `paiement_declare`) — la confirmation reste manuelle côté commerçant, faute d'API
+  publique Wave.
+- **Contact WhatsApp** direct en complément.
 
-1. Ouvre Telegram, cherche **@BotFather** et démarre une conversation.
-2. Envoie `/newbot`, donne un nom (ex: `MyCabine Notifs`) puis un identifiant unique se terminant par `bot` (ex: `mycabine_notify_bot`).
-3. BotFather te donne un **token** du type `123456789:AAExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`. **Copie-le.**
-4. Cherche ton bot dans Telegram (par son nom) et clique **Démarrer** / envoie-lui n'importe quel message (ex: "salut").
-5. Dans ton navigateur, ouvre cette adresse en remplaçant `TON_TOKEN` :
-   `https://api.telegram.org/botTON_TOKEN/getUpdates`
-6. Tu verras un texte JSON contenant `"chat":{"id":123456789,...}` — ce nombre est ton **chat_id**. Note-le.
+### Côté admin (`Espace admin`)
+- **Authentification Firebase** (email / mot de passe) réservée à une adresse autorisée.
+- **File de demandes en temps réel** (`onSnapshot`) : nouvelle demande → statut mis à jour
+  instantanément, sans rafraîchir la page.
+- **Gestion du catalogue** : opérateurs, pass, prix, durée.
+- **Paramètres** : lien Wave marchand, numéros de réception par opérateur.
+- **Notifications Telegram** : chaque demande déclenche un message via une route API
+  serverless (`pages/api/notify.js`), avec **limitation de débit** (15 messages/minute/IP).
 
----
+## Stack technique
 
-## Étape 3 — Récupérer le projet sur ton ordinateur
+| Couche | Technologie |
+|---|---|
+| Framework | **Next.js 14** (pages router, route API serverless) |
+| UI | React 18 + **TailwindCSS** + lucide-react |
+| Base de données | **Firebase Firestore** (temps réel) |
+| Auth | **Firebase Authentication** |
+| Notifications | **Telegram Bot API** via `pages/api/notify.js` |
+| Déploiement | Vercel (recommandé) ou Netlify + plugin Next.js |
 
-1. Télécharge le fichier `mycabine-web.zip` que je t'ai fourni et décompresse-le.
-2. Ouvre un terminal dans ce dossier, puis installe les dépendances :
-   ```
-   npm install
-   ```
+## Architecture
 
----
-
-## Étape 4 — Configurer les variables d'environnement
-
-1. Dans le dossier du projet, copie le fichier `.env.local.example` et renomme la copie en `.env.local`.
-2. Ouvre `.env.local` et remplis chaque ligne :
-   - Les 6 valeurs `NEXT_PUBLIC_FIREBASE_...` viennent du bloc `firebaseConfig` de l'étape 1.8.
-   - `TELEGRAM_BOT_TOKEN` = le token de l'étape 2.3.
-   - `TELEGRAM_CHAT_ID` = le chat_id de l'étape 2.6.
-3. Enregistre le fichier. **Ne le partage jamais et ne le mets jamais sur GitHub** (il est déjà exclu via `.gitignore`).
-
----
-
-## Étape 5 — Tester en local
-
-Dans le terminal, toujours dans le dossier du projet :
 ```
+mycabineweb/
+├── pages/
+│   ├── index.js         Boutique (public) + Espace admin dans la même app, selon l'état d'auth
+│   └── api/notify.js    Route serverless : proxy Telegram + anti-spam (15 req/min/IP)
+├── lib/firebase.js      Initialisation Firebase (config par variables d'environnement)
+├── firestore.rules      Règles de sécurité Firestore (voir ci-dessous)
+└── styles/              Tailwind
+```
+
+### Modèle Firestore
+
+| Collection | Écriture | Lecture |
+|---|---|---|
+| `settings/main` | création publique unique, puis **admin** | publique (catalogue, lien Wave) |
+| `requests/{id}` | **création publique** ; le client ne peut modifier **que** `status → paiement_declare` | **admin uniquement** |
+| `links/{id}` | création publique | **admin uniquement** |
+
+### Sécurité — un choix assumé
+
+Les règles `firestore.rules` suivent le principe du **moindre privilège** :
+
+- l'admin est identifié par une **adresse email exacte** (`request.auth.token.email`) ;
+- les demandes sont **lisibles uniquement par l'admin** — un client ne peut pas lire les
+  commandes des autres, seules ses propres écritures lui sont permises ;
+- la mise à jour client est restreinte par un `diff().affectedKeys()` : **seul le champ
+  `status`**, et **seulement** vers `paiement_declare`, et **jamais** après `traite` ;
+- `delete` est refusé partout : pas de perte de données accidentelle.
+
+## Démarrage rapide
+
+```bash
+npm install
+cp .env.local.example .env.local   # 6 clés Firebase + 2 clés Telegram
+npm run dev                        # http://localhost:3000
+```
+
+### Variables d'environnement
+
+| Variable | Source |
+|---|---|
+| `NEXT_PUBLIC_FIREBASE_API_KEY`, `..._AUTH_DOMAIN`, `..._PROJECT_ID`, `..._STORAGE_BUCKET`, `..._MESSAGING_SENDER_ID`, `..._APP_ID` | Console Firebase → Paramètres du projet → Vos applications (Web) |
+| `TELEGRAM_BOT_TOKEN` | @BotFather |
+| `TELEGRAM_CHAT_ID` | `https://api.telegram.org/bot<TOKEN>/getUpdates` |
+
+> `.env.local` est déjà exclu par `.gitignore`. Les clés `NEXT_PUBLIC_*` sont publiques par
+> nature (embarquées dans le bundle) — d'où l'importance des règles Firestore ; les clés
+> Telegram, elles, restent **strictement côté serveur**.
+
+## Déploiement sur Vercel
+
+1. **Import** du dépôt sur https://vercel.com/new.
+2. Ajouter les **8 variables d'environnement** (mêmes clés que `.env.local`).
+3. **Deploy** → `https://mycabine-web.vercel.app`.
+4. Dernière étape : se connecter à l'Espace admin et renseigner le lien Wave, les numéros de
+   réception et le catalogue.
+
+*Netlify fonctionne aussi*, à condition de conserver le plugin `@netlify/plugin-nextjs`
+(détecté automatiquement) pour que `pages/api/notify.js` s'exécute.
+
+## Limites connues (documentées volontairement)
+
+- **Confirmation de paiement** : Wave ne propose pas d'API publique de vérification ; la
+  confirmation reste **manuelle** dans l'espace admin.
+- **Anti-spam** : le compteur de `notify.js` est en mémoire, donc **par instance serverless**.
+  Suffisant pour ce volume, à remplacer par un stockage partagé si le trafic explose.
+- **Back-office** : un seul administrateur (adresse codée dans les règles Firestore) ;
+  en ajouter un demande de modifier `firestore.rules`.
+
+---
+
+## 🇬🇧 English
+
+**MyCabine** is a **Next.js** storefront that lets a mobile-data reseller (Orange, MTN, Moov,
+Wave) take online orders, collect payment through a Wave merchant link, and get **instant
+Telegram notifications** — no backend to operate.
+*Client project — designed, built and deployed.*
+
+- **Public catalog** of internet / call / SMS passes per operator, plus an order form.
+- **Admin area** behind Firebase Auth: real-time order queue (`onSnapshot`), pass catalog and
+  payment settings.
+- **Serverless Telegram proxy** (`pages/api/notify.js`) with per-IP rate limiting
+  (15 messages/minute).
+- **Firestore security rules** enforce least privilege: orders are readable **only** by the
+  admin; a client may update **only** the `status` field, **only** to `paiement_declare`,
+  **never** once the order is `traite`; deletes are denied everywhere.
+
+**Stack:** Next.js 14 · React 18 · TailwindCSS · Firebase Firestore + Auth · Telegram Bot API ·
+Vercel.
+
+```bash
+npm install
+cp .env.local.example .env.local   # 6 Firebase keys + 2 Telegram keys
 npm run dev
 ```
-Ouvre http://localhost:3000 dans ton navigateur. Le site doit s'afficher. Teste une "Transfert d'unité" fictive, puis va dans "Espace admin" et connecte-toi avec l'email/mot de passe créés à l'étape 1.6 — tu dois voir la demande apparaître, et recevoir un message sur Telegram.
 
-Si quelque chose ne marche pas, vérifie que toutes les valeurs dans `.env.local` sont correctes (pas d'espace en trop, pas de guillemets).
+**Known limitation:** Wave exposes no public payment-verification API, so payment
+confirmation remains a manual admin step.
 
----
-
-## Étape 6 — Mettre le code sur GitHub
-
-1. Crée un nouveau dépôt sur https://github.com/new (ex: `mycabine-web`), reste en **Private** si tu préfères.
-2. Dans le terminal, toujours dans le dossier du projet :
-   ```
-   git init
-   git add .
-   git commit -m "MyCabine - premier déploiement"
-   git branch -M main
-   git remote add origin https://github.com/TON_NOM_UTILISATEUR/mycabine-web.git
-   git push -u origin main
-   ```
-
----
-
-## Étape 7 — Déployer (Vercel ou Netlify)
-
-### Option A — Vercel (recommandé, le plus simple pour Next.js)
-1. Va sur https://vercel.com/new et connecte-toi avec ton compte GitHub.
-2. Clique **Import** à côté du dépôt `mycabine-web`.
-3. Dans la section **Environment Variables**, ajoute exactement les mêmes clés que dans ton `.env.local` (une par une : nom + valeur).
-4. Clique **Deploy**. Après 1-2 minutes, tu obtiens une adresse du type `https://mycabine-web.vercel.app`.
-
-### Option B — Netlify
-Netlify peut aussi héberger ce projet Next.js, mais demande un réglage en plus :
-1. Va sur https://app.netlify.com → **Add new site > Import an existing project**.
-2. Choisis GitHub, puis le dépôt `mycabine-web`.
-3. Dans **Build settings**, vérifie que :
-   - **Build command** = `npm run build`
-   - **Publish directory** = laisse le champ que Netlify propose automatiquement (il détecte Next.js et installe le plugin `@netlify/plugin-nextjs` tout seul — ne le supprime pas s'il apparaît).
-4. Dans **Environment variables** (accessible aussi après coup dans **Site configuration > Environment variables**), ajoute les mêmes 8 clés que dans `.env.local`.
-5. Clique **Deploy site**. Netlify te donne une adresse du type `https://mycabine-web.netlify.app`.
-
-Si le build Netlify échoue avec une erreur liée aux "API routes" ou au "runtime", va dans **Site configuration > Build & deploy > Environment** et vérifie que le plugin Next.js (`@netlify/plugin-nextjs`) est bien listé/activé — c'est lui qui permet à `pages/api/notify.js` de fonctionner sur Netlify.
-
-### Nom de domaine personnalisé (optionnel)
-Sur Vercel : **Project > Settings > Domains**. Sur Netlify : **Site configuration > Domain management**. Dans les deux cas, ajoute ton domaine et suis les instructions DNS affichées.
-
----
-
-## Étape 8 — Configurer l'application elle-même
-
-1. Ouvre ton site en ligne, va dans **Espace admin**, connecte-toi.
-2. Onglet **Paramètres** :
-   - Colle ton **lien Wave marchand**.
-   - Renseigne tes **numéros de réception** par opérateur.
-   - Ajuste le **catalogue de pass** si les prix ont changé.
-3. Enregistre.
-
-Ton site est maintenant pleinement fonctionnel : les clients peuvent commander, tu reçois une notification Telegram instantanée, et tu gères tout depuis l'espace admin.
-
----
-
-## Limites importantes à connaître
-
-- **Paiement** : le lien Wave généré ouvre bien une vraie page de paiement Wave, mais Wave ne préremplit le montant que si ton lien marchand le permet — teste-le une fois toi-même pour vérifier.
-- **Confirmation automatique** : il n'existe pas d'API publique Wave pour confirmer automatiquement qu'un paiement a été reçu. Tu dois toujours vérifier manuellement sur ton compte Wave avant de traiter la commande (comme convenu dans le fonctionnement de l'appli).
-- **Coût** : Firebase (Firestore + Authentication) et Vercel restent gratuits pour ce volume d'usage. Si le site devient très populaire, Firebase peut demander de passer sur un plan payant à l'usage — mais les seuils gratuits sont larges pour démarrer.
-- Si tu veux ajouter un deuxième administrateur plus tard, retourne dans Firebase Authentication > Users > Add user.
+**Author:** Yeo Daniel — [github.com/Dani-code17](https://github.com/Dani-code17)
